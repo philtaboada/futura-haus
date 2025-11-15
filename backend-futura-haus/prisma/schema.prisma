@@ -1,0 +1,76 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique @db.Text
+  passwordHash String   @map("password_hash") @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+}
+
+model Product {
+  id        Int         @id @default(autoincrement())
+  name      String      @db.Text
+  sku       String      @unique @db.Text
+  price     Decimal     @db.Decimal(12, 2)
+  stock     Int         @db.Integer
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Customer {
+  id      Int      @id @default(autoincrement())
+  name    String   @db.Text
+  email   String   @unique @db.Text
+  orders  Order[]
+
+  @@map("customers")
+}
+
+model Order {
+  id         Int          @id @default(autoincrement())
+  customerId Int          @map("customer_id")
+  status     OrderStatus  @default(PENDING)
+  total      Decimal      @default(0) @db.Decimal(12, 2)
+  createdAt  DateTime     @default(now()) @map("created_at")
+  customer   Customer     @relation(fields: [customerId], references: [id])
+  items      OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int      @map("order_id")
+  productId Int      @map("product_id")
+  qty       Int      @db.Integer
+  price     Decimal  @db.Decimal(12, 2)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId])
+  @@map("order_items")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+
+  @@map("order_status")
+}

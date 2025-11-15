@@ -1,0 +1,55 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: futura-haus-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-futura_haus}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend-futura-haus
+      dockerfile: Dockerfile.dev
+    container_name: futura-haus-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-futura_haus}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-in-production}
+      PORT: 3000
+      FRONTEND_URL: http://localhost:5173
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend-futura-haus:/app
+    command: npm run start:dev
+
+  frontend:
+    build:
+      context: ./front-futura-haus
+      dockerfile: Dockerfile.dev
+    container_name: futura-haus-frontend
+    environment:
+      VITE_API_URL: http://localhost:3000/api
+    ports:
+      - '5173:5173'
+    depends_on:
+      - backend
+    volumes:
+      - ./front-futura-haus:/app
+    command: bun run dev -- --host
+
+volumes:
+  postgres_data:
