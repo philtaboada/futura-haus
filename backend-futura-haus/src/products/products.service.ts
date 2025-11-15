@@ -94,6 +94,8 @@ export class ProductsService {
   async remove(id: number) {
     await this.findOne(id);
 
+    // Eliminar el producto. Los order_items mantendrán su información histórica
+    // (precio y cantidad) pero la referencia al producto se establecerá como null
     return this.prisma.product.delete({
       where: { id }
     });

@@ -353,10 +353,4 @@ Este proyecto fue desarrollado utilizando **Cursor AI** como herramienta de asis
 - Creación de componentes React con manejo de estado
 - Optimización de queries y transacciones de base de datos
 
-### Ajustes manuales realizados:
-- Validaciones de negocio específicas (stock, precios negativos)
-- Manejo de errores y mensajes de usuario
-- Estilos CSS personalizados
-- Configuración de Docker Compose
-- Tests unitarios con casos de borde
 

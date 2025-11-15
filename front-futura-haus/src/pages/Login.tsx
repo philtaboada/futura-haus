@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Field, FieldGroup, FieldLabel, FieldDescription, FieldError } from '@/components/ui/field'
+import { Field, FieldGroup, FieldLabel, FieldError } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Controller } from 'react-hook-form'
@@ -13,8 +13,8 @@ import { AxiosError } from 'axios'
 import { getValidToken } from '@/utils/jwt'
 
 const formSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+  email: z.string().min(1, 'El email es requerido').email('Email inválido'),
+  password: z.string().min(1, 'La contraseña es requerida').min(8, 'La contraseña debe tener al menos 8 caracteres'),
 })
 
 type FormSchema = z.infer<typeof formSchema>
@@ -55,7 +55,29 @@ export const Login = () => {
         setError('No se recibió un token válido')
       }
     } catch (error) {
-      const errorMessage = (error as AxiosError<{ message: string }>)?.response?.data?.message || 'Error al iniciar sesión'
+      const axiosError = error as AxiosError<{ message?: string; statusCode?: number }>
+      let errorMessage = 'Error al iniciar sesión'
+      
+      if (axiosError.response) {
+        const responseData = axiosError.response.data
+        const backendMessage = responseData?.message || ''
+        const statusCode = axiosError.response.status || responseData?.statusCode
+        
+        // Traducir mensajes comunes del backend
+        if (statusCode === 401 || backendMessage.toLowerCase().includes('invalid credentials') || backendMessage.toLowerCase().includes('unauthorized')) {
+          errorMessage = 'Credenciales incorrectas. Verifique su email y contraseña.'
+        } else if (statusCode === 404) {
+          errorMessage = 'Usuario no encontrado.'
+        } else if (statusCode && statusCode >= 500) {
+          errorMessage = 'Error del servidor. Por favor, intente más tarde.'
+        } else if (backendMessage) {
+          // Si hay un mensaje del backend pero no coincide con los casos anteriores, usarlo
+          errorMessage = backendMessage
+        }
+      } else if (axiosError.request) {
+        errorMessage = 'No se pudo conectar al servidor. Verifique su conexión.'
+      }
+      
       setError(errorMessage)
       console.error('Error en login:', error)
     } finally {
@@ -80,12 +102,13 @@ export const Login = () => {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="form-rhf-demo-title">
+                    <FieldLabel htmlFor="form-rhf-demo-email">
                       Email
                     </FieldLabel>
                     <Input
                       {...field}
                       id="form-rhf-demo-email"
+                      type="email"
                       aria-invalid={fieldState.invalid}
                       placeholder="Email"
                       autoComplete="off"
@@ -101,20 +124,17 @@ export const Login = () => {
                 control={form.control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="form-rhf-demo-description">
-                      Password
+                    <FieldLabel htmlFor="form-rhf-demo-password">
+                      Contraseña
                     </FieldLabel>
                     <Input
                       {...field}
                       id="form-rhf-demo-password"
                       type="password"
                       aria-invalid={fieldState.invalid}
-                      placeholder="Password"
+                      placeholder="Contraseña"
                       autoComplete="off"
                     />
-                    <FieldDescription>
-                      {fieldState.error?.message}
-                    </FieldDescription>
                     {fieldState.invalid && (
                       <FieldError errors={[fieldState.error]} />
                     )}
