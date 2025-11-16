@@ -64,7 +64,8 @@ model OrderItem {
   order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product   Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
 
-  @@unique([orderId, productId])
+  // El constraint único parcial se maneja a nivel de base de datos mediante índice único parcial
+  // que solo se aplica cuando productId no es null (ver migración)
   @@map("order_items")
 }
 

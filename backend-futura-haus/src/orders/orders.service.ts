@@ -119,10 +119,14 @@ export class OrdersService {
     }
 
     // Usar transacción para descontar stock y confirmar el pedido
-    return this.prisma.$transaction(async (tx) => {
+    return this.prisma.$transaction(async (transaction) => {
       // Verificar stock nuevamente antes de confirmar (por si cambió desde la creación)
       for (const item of order.items) {
-        const product = await tx.product.findUnique({
+        if (!item.productId) {
+          throw new NotFoundException(`El item del pedido no tiene un producto asociado`);
+        }
+
+        const product = await transaction.product.findUnique({
           where: { id: item.productId }
         });
 
@@ -137,7 +141,7 @@ export class OrdersService {
         }
 
         // Descontar stock
-        await tx.product.update({
+        await transaction.product.update({
           where: { id: item.productId },
           data: {
             stock: {
@@ -148,7 +152,7 @@ export class OrdersService {
       }
 
       // Confirmar el pedido
-      return tx.order.update({
+      return transaction.order.update({
         where: { id },
         data: {
           status: OrderStatus.CONFIRMED
